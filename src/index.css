@@ -26,8 +26,6 @@ a:hover {
 [data-reveal] {
     opacity: 0;
     transform: translateY(32px);
-    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: opacity, transform;
 }
 
@@ -35,9 +33,10 @@ a:hover {
     transform: translateY(16px) scale(0.85);
 }
 
-[data-reveal].is-visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+@media (max-width: 680px) {
+    .nav-link {
+        display: none;
+    }
 }
 
 .btn {

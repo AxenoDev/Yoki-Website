@@ -29,32 +29,45 @@ const STATS = [
 
 function useScrollReveal() {
     useEffect(() => {
-        const els = Array.from(document.querySelectorAll("[data-reveal]"));
+        const els = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const offsets = new Map<HTMLElement, number>();
         els.forEach((el) => {
             const parent = el.parentElement;
-            if (!parent) return;
-            const siblings = Array.from(parent.children).filter((c) =>
-                c.hasAttribute("data-reveal")
-            );
-            (el as HTMLElement).dataset.revealDelay = `${Math.min(siblings.indexOf(el), 7) * 90}`;
+            const siblings = parent
+                ? Array.from(parent.children).filter((c) => c.hasAttribute("data-reveal"))
+                : [el];
+            offsets.set(el, Math.min(siblings.indexOf(el), 5) * 0.08);
         });
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    const el = entry.target as HTMLElement;
-                    if (entry.isIntersecting) {
-                        el.style.transitionDelay = el.dataset.revealDelay + "ms";
-                        el.classList.add("is-visible");
-                    } else {
-                        el.style.transitionDelay = "0ms";
-                        el.classList.remove("is-visible");
-                    }
-                });
-            },
-            {threshold: 0.1, rootMargin: "0px 0px -8% 0px"}
-        );
-        els.forEach((el) => observer.observe(el));
-        return () => observer.disconnect();
+
+        let raf = 0;
+        const update = () => {
+            raf = 0;
+            const vh = window.innerHeight;
+            const range = vh * 0.28;
+            const atBottom = window.scrollY + vh >= document.documentElement.scrollHeight - 2;
+            for (const el of els) {
+                const top = el.getBoundingClientRect().top;
+                const raw = (vh - top) / range - (offsets.get(el) ?? 0);
+                const p = reduced || atBottom ? 1 : Math.min(1, Math.max(0, raw));
+                el.style.opacity = String(p);
+                el.style.transform =
+                    el.dataset.reveal === "scale"
+                        ? `translateY(${16 * (1 - p)}px) scale(${0.85 + 0.15 * p})`
+                        : `translateY(${32 * (1 - p)}px)`;
+            }
+        };
+        const onScroll = () => {
+            if (!raf) raf = requestAnimationFrame(update);
+        };
+        update();
+        window.addEventListener("scroll", onScroll, {passive: true});
+        window.addEventListener("resize", onScroll);
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", onScroll);
+        };
     }, []);
 }
 
@@ -75,16 +88,16 @@ function Nav() {
                 justifyContent: "space-between",
                 maxWidth: 1040,
                 margin: "0 auto",
-                padding: "16px 32px"
+                padding: "16px clamp(20px, 4vw, 32px)"
             }}>
                 <a href="/" style={{display: "flex", alignItems: "center", gap: 12}}>
                     <img src="/logo.svg" alt="Yoki" style={{width: 34, height: 34, borderRadius: 8}}/>
                     <img src="/text.svg" alt="Yoki" style={{height: 20, display: "block"}}/>
                 </a>
                 <div style={{display: "flex", alignItems: "center", gap: 32, fontSize: 14, fontWeight: 500}}>
-                    <a href="#features">Features</a>
-                    <a href="#why-rust">Why Rust</a>
-                    <a href="#get-started">Documentation</a>
+                    <a className="nav-link" href="#features">Features</a>
+                    <a className="nav-link" href="#why-rust">Why Rust</a>
+                    <a className="nav-link" href="#get-started">Documentation</a>
                     <a href="https://github.com/AxenoDev/Yoki" className="btn btn-dark"
                        style={{padding: "9px 18px", fontSize: 14}}>GitHub</a>
                 </div>
@@ -95,13 +108,24 @@ function Nav() {
 
 function Hero() {
     return (
-        <header style={{maxWidth: 1040, margin: "0 auto", padding: "186px 32px 120px", textAlign: "center"}}>
+        <header style={{
+            maxWidth: 1040,
+            margin: "0 auto",
+            padding: "clamp(140px, 22vh, 186px) clamp(20px, 4vw, 32px) clamp(80px, 13vh, 120px)",
+            textAlign: "center"
+        }}>
             <h1 data-reveal=""
-                style={{fontSize: 72, fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.05, margin: "0 0 24px"}}>
+                style={{
+                    fontSize: "clamp(42px, 9vw, 72px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1.05,
+                    margin: "0 0 24px"
+                }}>
                 Yoki, the Minecraft<br/> server reinvented.
             </h1>
             <p data-reveal="" style={{
-                fontSize: 20,
+                fontSize: "clamp(17px, 4.5vw, 20px)",
                 lineHeight: 1.6,
                 color: "#5C6470",
                 maxWidth: 560,
@@ -111,7 +135,7 @@ function Hero() {
                 A high-performance Minecraft server written from scratch in Rust.
                 Zero JVM, wro lag spikes - pure performance.
             </p>
-            <div data-reveal="" style={{display: "flex", gap: 14, justifyContent: "center"}}>
+            <div data-reveal="" style={{display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap"}}>
                 <a href="#get-started" className="btn btn-primary">Get started</a>
                 <a href="#features" className="btn btn-outline">Explore</a>
             </div>
@@ -138,7 +162,12 @@ function Terminal() {
         hour12: false,
     });
     return (
-        <section data-reveal="" style={{maxWidth: 720, margin: "0 auto", padding: "0 32px 120px"}}>
+        <section data-reveal=""
+                 style={{
+                     maxWidth: 720,
+                     margin: "0 auto",
+                     padding: "0 clamp(20px, 4vw, 32px) clamp(80px, 13vh, 120px)"
+                 }}>
             <div style={{
                 background: "#1E2A38",
                 borderRadius: 16,
@@ -167,11 +196,13 @@ function Terminal() {
                     fontFamily: "'SF Mono', ui-monospace, Menlo, monospace",
                     fontSize: 14,
                     lineHeight: 1.9,
-                    color: "#F4E9D2"
+                    color: "#F4E9D2",
+                    overflowX: "auto",
+                    whiteSpace: "nowrap"
                 }}>
                     <div><span style={{color: "#C8452C"}}>$</span> cargo run --release</div>
-                    <div style={{color: "#8A97A5"}}> Compiling yoki v0.1.0</div>
-                    <div style={{color: "#8A97A5"}}> Finished release in 4.2s</div>
+                    <div style={{color: "#8A97A5"}}> Compiling yoki v0.0.1-beta-1</div>
+                    <div style={{color: "#8A97A5"}}> Finished release in 1.13s</div>
                     <div style={{color: "#8A97A5"}}>
                         <span style={{color: "#5C6470"}}>[{previousTime} <span
                             style={{color: "#7FB37A"}}>INFO</span>]:</span>
@@ -192,15 +223,24 @@ function Terminal() {
 function Features() {
     return (
         <section id="features" style={{background: "#F7F1E3"}}>
-            <div style={{maxWidth: 1040, margin: "0 auto", padding: "110px 32px"}}>
+            <div style={{maxWidth: 1040, margin: "0 auto", padding: "clamp(70px, 12vh, 110px) clamp(20px, 4vw, 32px)"}}>
                 <h2 data-reveal=""
-                    style={{fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 12px"}}>Built for
+                    style={{
+                        fontSize: "clamp(32px, 7vw, 44px)",
+                        fontWeight: 700,
+                        letterSpacing: "-0.02em",
+                        margin: "0 0 12px"
+                    }}>Built for
                     performance.</h2>
                 <p data-reveal=""
                    style={{fontSize: 18, color: "#5C6470", margin: "0 0 64px", maxWidth: 520, textWrap: "pretty"}}>
                     Every tick counts. Yoki rethinks server architecture from the ground up.
                 </p>
-                <div style={{display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20}}>
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))",
+                    gap: 20
+                }}>
                     {FEATURES.map((f) => (
                         <div key={f.tag} data-reveal=""
                              style={{background: "#FDFDFB", borderRadius: 18, padding: "32px 28px"}}>
@@ -237,15 +277,15 @@ function WhyRust() {
         <section id="why-rust" style={{
             maxWidth: 1040,
             margin: "0 auto",
-            padding: "130px 32px",
+            padding: "clamp(80px, 14vh, 130px) clamp(20px, 4vw, 32px)",
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 80,
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+            gap: "clamp(40px, 7vw, 80px)",
             alignItems: "center"
         }}>
             <div data-reveal="">
                 <h2 style={{
-                    fontSize: 44,
+                    fontSize: "clamp(32px, 7vw, 44px)",
                     fontWeight: 700,
                     letterSpacing: "-0.02em",
                     margin: "0 0 20px",
@@ -280,16 +320,30 @@ function WhyRust() {
 function CTA() {
     return (
         <section id="get-started"
-                 style={{maxWidth: 1040, margin: "0 auto", padding: "0 32px 130px", textAlign: "center"}}>
-            <div style={{border: "1px solid #EDE8DB", borderRadius: 24, padding: "90px 40px"}}>
+                 style={{
+                     maxWidth: 1040,
+                     margin: "0 auto",
+                     padding: "0 clamp(20px, 4vw, 32px) clamp(80px, 14vh, 130px)",
+                     textAlign: "center"
+                 }}>
+            <div style={{
+                border: "1px solid #EDE8DB",
+                borderRadius: 24,
+                padding: "clamp(48px, 9vw, 90px) clamp(20px, 5vw, 40px)"
+            }}>
                 <img data-reveal="scale" src="/logo.svg" alt=""
                      style={{width: 56, height: 56, borderRadius: 14, marginBottom: 28}}/>
                 <h2 data-reveal=""
-                    style={{fontSize: 40, fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 14px"}}>Ready to
+                    style={{
+                        fontSize: "clamp(30px, 7vw, 40px)",
+                        fontWeight: 700,
+                        letterSpacing: "-0.02em",
+                        margin: "0 0 14px"
+                    }}>Ready to
                     try?</h2>
                 <p data-reveal="" style={{fontSize: 17, color: "#5C6470", margin: "0 0 36px"}}>Open source. One binary.
                     Zero Java dependencies.</p>
-                <div data-reveal="" style={{display: "flex", gap: 14, justifyContent: "center"}}>
+                <div data-reveal="" style={{display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap"}}>
                     <a href="https://github.com/AxenoDev/Yoki" className="btn btn-dark">View on GitHub</a>
                     <a href="#" className="btn btn-outline">Read the docs</a>
                 </div>
@@ -304,10 +358,12 @@ function Footer() {
             <div style={{
                 maxWidth: 1040,
                 margin: "0 auto",
-                padding: 32,
+                padding: "32px clamp(20px, 4vw, 32px)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 14,
                 fontSize: 13,
                 color: "#8A929C"
             }}>
