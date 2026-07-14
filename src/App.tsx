@@ -23,7 +23,7 @@ const FEATURES = [
 
 const STATS = [
     {label: "Startup time", value: "< 50 ms"},
-    {label: "Memory footprint", value: "~ 30 MB"},
+    {label: "Memory footprint", value: "~ 10 MB"},
     {label: "Garbage collector pauses", value: "0"},
 ];
 
@@ -296,7 +296,8 @@ function WhyRust() {
                     players are exploring.
                 </p>
                 <p style={{fontSize: 17, lineHeight: 1.7, color: "#5C6470", margin: 0, textWrap: "pretty"}}>
-                    The result: stable ticks, a tiny memory footprint, and a server that doesn't crash at 3 a.m.
+                    The result: stable ticks, a tiny memory footprint, and a server that doesn't crash at 3 a.m. (lmao
+                    openmc)
                 </p>
             </div>
             <div style={{display: "grid", gap: 14}}>
